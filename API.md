@@ -2,7 +2,39 @@
 
 ## Overview
 
-2 separate API servers untuk anime dan manga scraping.
+2 separate API servers untuk anime dan manga scraping dengan caching & image proxy.
+
+##⚡ NEW FEATURES
+
+### Image Proxy
+
+Bypass CORS & hotlink protection:
+
+```http
+GET /api/v1/proxy/image?url=<base64_encoded_url>&size=small
+
+Sizes:
+- small: 150px width
+- medium: 300px width
+- large: 600px width
+- (no size): original
+```
+
+Example (JavaScript):
+
+```javascript
+const imageUrl = "https://example.com/image.jpg";
+const encoded = btoa(imageUrl);
+const proxyUrl = `http://localhost:3001/api/v1/proxy/image?url=${encoded}&size=medium`;
+```
+
+### Response Caching
+
+Frequently accessed endpoints are cached:
+
+- Homepage data: 5 minutes
+- Genre lists: 10 minutes
+- Reduces server load & improves response time
 
 ---
 
@@ -16,62 +48,49 @@ http://localhost:3001/api/v1
 
 ### Endpoints
 
+#### Image Proxy
+
+```http
+GET /proxy/image?url=<base64_url>&size=small|medium|large
+```
+
 #### Search Anime
 
 ```http
 GET /search?q=naruto
 ```
 
-Response:
-
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "title": "Naruto",
-      "endpoint": "/anime/naruto",
-      "image": "...",
-      "rating": "8.5",
-      "status": "Completed",
-      "type": "TV"
-    }
-  ],
-  "meta": { "total": 10 }
-}
-```
-
-#### Top Series
+#### Top Series (Cached 5min)
 
 ```http
 GET /top-series
 ```
 
-#### Top Movies
+#### Top Movies (Cached 5min)
 
 ```http
 GET /top-movies
 ```
 
-#### Latest Movies
+#### Latest Movies (Cached 5min)
 
 ```http
 GET /latest-movies
 ```
 
-#### Latest Anime
+#### Latest Anime (Cached 5min)
 
 ```http
 GET /latest-anime
 ```
 
-#### Drama (International)
+#### Drama (Cached 5min)
 
 ```http
 GET /drama
 ```
 
-#### Genres
+#### Genres (Cached 10min)
 
 ```http
 GET /genres
@@ -81,22 +100,18 @@ GET /genres
 
 ```http
 GET /anime/:endpoint
-# Example: GET /anime/anime/naruto
 ```
 
 #### Episode Data
 
 ```http
 GET /episode/:endpoint
-# Example: GET /episode/episode/naruto-episode-1
 ```
 
 #### Resolve Stream
 
 ```http
 POST /stream/resolve
-Content-Type: application/json
-
 {
   "postId": "123",
   "nume": "1",
@@ -116,25 +131,31 @@ http://localhost:3002/api/v1
 
 ### Endpoints
 
+#### Image Proxy
+
+```http
+GET /proxy/image?url=<base64_url>&size=small|medium|large
+```
+
 #### Search Manga
 
 ```http
 GET /search?q=one+piece
 ```
 
-#### Trending
+#### Trending (Cached 5min)
 
 ```http
 GET /trending
 ```
 
-#### Popular
+#### Popular (Cached 5min)
 
 ```http
 GET /popular
 ```
 
-#### Genres
+#### Genres (Cached 10min)
 
 ```http
 GET /genres
@@ -144,14 +165,12 @@ GET /genres
 
 ```http
 GET /manga/:endpoint
-# Example: GET /manga/manga/one-piece
 ```
 
 #### Chapter Images
 
 ```http
 GET /chapter/:endpoint
-# Example: GET /chapter/ch/one-piece-chapter-1
 ```
 
 #### Recommendations
@@ -162,162 +181,102 @@ GET /recommendations/:endpoint
 
 ---
 
-## Running the Servers
+## Usage Examples
 
-### Development
-
-```bash
-# Terminal 1 - Anime API
-go run cmd/anime-api/main.go
-
-# Terminal 2 - Manga API
-go run cmd/manga-api/main.go
-```
-
-### Production
-
-```bash
-# Build
-go build -o anime-api ./cmd/anime-api
-go build -o manga-api ./cmd/manga-api
-
-# Run
-./anime-api &
-./manga-api &
-```
-
----
-
-## Integration with Astro
-
-### Example: Fetch Trending Manga
+### Astro/React - Using Image Proxy
 
 ```typescript
-// In your Astro component
-const response = await fetch("http://your-server:3002/api/v1/trending");
-const data = await response.json();
-
-if (data.success) {
-  const mangaList = data.data;
-  // Render manga list
+// Utility function to get proxied image URL
+function getProxiedImageUrl(originalUrl: string, size?: 'small' | 'medium' | 'large') {
+  const encoded = btoa(originalUrl);
+  const sizeParam = size ? `&size=${size}` : '';
+  return `http://your-server:3001/api/v1/proxy/image?url=${encoded}${sizeParam}`;
 }
+
+// In component
+const manga = await fetch('http://your-server:3002/api/v1/trending').then(r => r.json());
+
+// Use proxied images
+<img src={getProxiedImageUrl(manga.data[0].image, 'medium')} alt={manga.data[0].title} />
 ```
 
-### Example: Search Anime
+### Performance Benefits
 
-```typescript
-const q = "naruto";
-const response = await fetch(`http://your-server:3001/api/v1/search?q=${q}`);
-const data = await response.json();
-```
+- **Cached responses**: 5-10 min cache reduces redundant scraping
+- **Smaller images**: Thumbnails load faster
+- **Single origin**: No CORS issues
 
 ---
 
-## Deployment on Proxmox
+## Response Format
 
-### Option 1: Systemd Services
+### Success
 
-Create `/etc/systemd/system/anime-api.service`:
-
-```ini
-[Unit]
-Description=Anime API Server
-After=network.target
-
-[Service]
-Type=simple
-User=your-user
-WorkingDirectory=/path/to/scraper
-ExecStart=/path/to/scraper/anime-api
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Create `/etc/systemd/system/manga-api.service`:
-
-```ini
-[Unit]
-Description=Manga API Server
-After=network.target
-
-[Service]
-Type=simple
-User=your-user
-WorkingDirectory=/path/to/scraper
-ExecStart=/path/to/scraper/manga-api
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Enable & start:
-
-```bash
-sudo systemctl enable anime-api manga-api
-sudo systemctl start anime-api manga-api
-```
-
-### Option 2: Nginx Reverse Proxy
-
-Add to your Nginx config:
-
-```nginx
-# Anime API
-location /api/anime/ {
-    proxy_pass http://localhost:3001/api/v1/;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-}
-
-# Manga API
-location /api/manga/ {
-    proxy_pass http://localhost:3002/api/v1/;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
+```json
+{
+  "success": true,
+  "data": [...],
+  "meta": {
+    "total": 100
+  }
 }
 ```
 
-Then access via:
-
-- `https://yourdomain.com/api/anime/search?q=naruto`
-- `https://yourdomain.com/api/manga/trending`
-
----
-
-## CORS Configuration
-
-Update `AllowOrigins` in both API servers for production:
-
-```go
-app.Use(cors.New(cors.Config{
-    AllowOrigins: "https://yourdomain.com",
-    AllowMethods: "GET,POST",
-    AllowHeaders: "Origin, Content-Type, Accept",
-}))
-```
-
----
-
-## Error Handling
-
-All errors return:
+### Error
 
 ```json
 {
   "success": false,
   "error": {
     "code": "ERROR_CODE",
-    "message": "Human readable message"
+    "message": "Description"
   }
 }
 ```
 
-Common error codes:
+---
 
-- `INVALID_QUERY` - Query parameter missing
-- `SEARCH_FAILED` - Search error
-- `FETCH_FAILED` - Failed to fetch data
-- `NOT_FOUND` - Resource not found
+## Deployment (see DOCKER.md)
+
+### Quick Start
+
+```bash
+docker-compose up -d
+```
+
+### Production
+
+- Update CORS origins in both API files
+- Use Nginx reverse proxy
+- Enable HTTPS
+
+---
+
+## Performance Notes
+
+### Cache TTL
+
+- Homepage endpoints: 5 minutes
+- Genre lists: 10 minutes
+- Detail/chapter: No cache (always fresh)
+
+### Image Proxy
+
+- Caches images: 24 hours (browser)
+- Resize quality: 85% JPEG
+- Supports PNG & JPEG
+
+---
+
+## Changelog
+
+### v1.1 (Current)
+
+- ✅ Image proxy with resize
+- ✅ Response caching
+- ✅ Better error messages
+
+### v1.0
+
+- Initial release
+- Basic scraping endpoints

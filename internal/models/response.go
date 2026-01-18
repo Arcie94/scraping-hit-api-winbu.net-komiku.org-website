@@ -16,8 +16,10 @@ type APIError struct {
 
 // Meta contains pagination and additional info
 type Meta struct {
-	Total int `json:"total,omitempty"`
-	Page  int `json:"page,omitempty"`
+	Total      int `json:"total,omitempty"`
+	Page       int `json:"page,omitempty"`
+	Limit      int `json:"limit,omitempty"`
+	TotalPages int `json:"total_pages,omitempty"`
 }
 
 // Helper functions

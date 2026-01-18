@@ -1,26 +1,107 @@
-# API Documentation
+# API Documentation v1.1
 
-## Overview
+## Base URLs
 
-2 separate API servers untuk anime dan manga scraping dengan caching & image proxy.
+- **Anime API**: `http://localhost:3001`
+- **Manga API**: `http://localhost:3002`
 
-##⚡ NEW FEATURES
+---
 
-### Image Proxy
+## NEW in v1.1
 
-Bypass CORS & hotlink protection:
+### Health Check
+
+Monitor API and scraper status:
 
 ```http
-GET /api/v1/proxy/image?url=<base64_encoded_url>&size=small
-
-Sizes:
-- small: 150px width
-- medium: 300px width
-- large: 600px width
-- (no size): original
+GET /health
 ```
 
-Example (JavaScript):
+Response:
+
+```json
+{
+  "status": "healthy",
+  "timestamp": "2026-01-18T22:30:00Z",
+  "uptime": 86400.5,
+  "scraper": {
+    "name": "Winbu",
+    "status": "ok",
+    "url": "https://winbu.net"
+  },
+  "requests_served": 15432
+}
+```
+
+### Batch Endpoints
+
+Fetch multiple items in one request:
+
+#### Anime Batch
+
+```http
+POST /api/v1/batch/anime
+Content-Type: application/json
+
+{
+  "endpoints": [
+    "/anime/naruto",
+    "/anime/one-piece"
+  ]
+}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "data": [{...}, {...}],
+  "meta": {
+    "total": 2,
+    "requested": 2,
+    "failed": 0
+  }
+}
+```
+
+#### Manga Batch
+
+```http
+POST /api/v1/batch/manga
+Content-Type: application/json
+
+{
+  "endpoints": [
+    "/manga/one-piece",
+    "/manga/naruto"
+  ]
+}
+```
+
+**Limits:**
+
+- Maximum 10 items per batch
+- Failed items return in `errors` array
+- Partial success supported
+
+---
+
+## Image Proxy
+
+Bypass CORS & resize images:
+
+```http
+GET /api/v1/proxy/image?url=<base64_url>&size=small|medium|large
+```
+
+Sizes:
+
+- `small`: 150px width
+- `medium`: 300px width
+- `large`: 600px width
+
+Example:
 
 ```javascript
 const imageUrl = "https://example.com/image.jpg";
@@ -28,243 +109,168 @@ const encoded = btoa(imageUrl);
 const proxyUrl = `http://localhost:3001/api/v1/proxy/image?url=${encoded}&size=medium`;
 ```
 
-### Response Caching
+---
 
-Frequently accessed endpoints are cached:
+## Anime API Endpoints
+
+### Health & Info
+
+```http
+GET /           # Simple info
+GET /health     # Enhanced health check
+```
+
+### Image & Batch
+
+```http
+GET /api/v1/proxy/image?url=<base64>&size=<size>
+POST /api/v1/batch/anime
+```
+
+### Search & Lists
+
+```http
+GET /api/v1/search?q=naruto
+GET /api/v1/top-series        # Cached 5min
+GET /api/v1/top-movies        # Cached 5min
+GET /api/v1/latest-movies     # Cached 5min
+GET /api/v1/latest-anime      # Cached 5min
+GET /api/v1/drama             # Cached 5min
+GET /api/v1/genres            # Cached 10min
+```
+
+### Details & Stream
+
+```http
+GET /api/v1/anime/:endpoint
+GET /api/v1/episode/:endpoint
+POST /api/v1/stream/resolve
+```
+
+---
+
+## Manga API Endpoints
+
+### Health & Info
+
+```http
+GET /           # Simple info
+GET /health     # Enhanced health check
+```
+
+### Image & Batch
+
+```http
+GET /api/v1/proxy/image?url=<base64>&size=<size>
+POST /api/v1/batch/manga
+```
+
+### Search & Lists
+
+```http
+GET /api/v1/search?q=one+piece
+GET /api/v1/trending         # Cached 5min
+GET /api/v1/popular          # Cached 5min
+GET /api/v1/genres           # Cached 10min
+```
+
+### Details & Chapters
+
+```http
+GET /api/v1/manga/:endpoint
+GET /api/v1/chapter/:endpoint
+GET /api/v1/recommendations/:endpoint
+```
+
+---
+
+## Features
+
+### Caching
 
 - Homepage data: 5 minutes
 - Genre lists: 10 minutes
-- Reduces server load & improves response time
+- Detail/chapter: No cache (always fresh)
 
----
+### Rate Limiting
 
-## Anime API (Port 3001)
+- Default: 45 req/min per IP
+- With API key: 450 req/min
+- Header: `X-API-Key: your-key`
 
-### Base URL
-
-```
-http://localhost:3001/api/v1
-```
-
-### Endpoints
-
-#### Image Proxy
-
-```http
-GET /proxy/image?url=<base64_url>&size=small|medium|large
-```
-
-#### Search Anime
-
-```http
-GET /search?q=naruto
-```
-
-#### Top Series (Cached 5min)
-
-```http
-GET /top-series
-```
-
-#### Top Movies (Cached 5min)
-
-```http
-GET /top-movies
-```
-
-#### Latest Movies (Cached 5min)
-
-```http
-GET /latest-movies
-```
-
-#### Latest Anime (Cached 5min)
-
-```http
-GET /latest-anime
-```
-
-#### Drama (Cached 5min)
-
-```http
-GET /drama
-```
-
-#### Genres (Cached 10min)
-
-```http
-GET /genres
-```
-
-#### Anime Detail
-
-```http
-GET /anime/:endpoint
-```
-
-#### Episode Data
-
-```http
-GET /episode/:endpoint
-```
-
-#### Resolve Stream
-
-```http
-POST /stream/resolve
-{
-  "postId": "123",
-  "nume": "1",
-  "type": "anime"
-}
-```
-
----
-
-## Manga API (Port 3002)
-
-### Base URL
-
-```
-http://localhost:3002/api/v1
-```
-
-### Endpoints
-
-#### Image Proxy
-
-```http
-GET /proxy/image?url=<base64_url>&size=small|medium|large
-```
-
-#### Search Manga
-
-```http
-GET /search?q=one+piece
-```
-
-#### Trending (Cached 5min)
-
-```http
-GET /trending
-```
-
-#### Popular (Cached 5min)
-
-```http
-GET /popular
-```
-
-#### Genres (Cached 10min)
-
-```http
-GET /genres
-```
-
-#### Manga Detail
-
-```http
-GET /manga/:endpoint
-```
-
-#### Chapter Images
-
-```http
-GET /chapter/:endpoint
-```
-
-#### Recommendations
-
-```http
-GET /recommendations/:endpoint
-```
-
----
-
-## Usage Examples
-
-### Astro/React - Using Image Proxy
-
-```typescript
-// Utility function to get proxied image URL
-function getProxiedImageUrl(originalUrl: string, size?: 'small' | 'medium' | 'large') {
-  const encoded = btoa(originalUrl);
-  const sizeParam = size ? `&size=${size}` : '';
-  return `http://your-server:3001/api/v1/proxy/image?url=${encoded}${sizeParam}`;
-}
-
-// In component
-const manga = await fetch('http://your-server:3002/api/v1/trending').then(r => r.json());
-
-// Use proxied images
-<img src={getProxiedImageUrl(manga.data[0].image, 'medium')} alt={manga.data[0].title} />
-```
-
-### Performance Benefits
-
-- **Cached responses**: 5-10 min cache reduces redundant scraping
-- **Smaller images**: Thumbnails load faster
-- **Single origin**: No CORS issues
-
----
-
-## Response Format
-
-### Success
-
-```json
-{
-  "success": true,
-  "data": [...],
-  "meta": {
-    "total": 100
-  }
-}
-```
-
-### Error
+### Error Responses
 
 ```json
 {
   "success": false,
   "error": {
     "code": "ERROR_CODE",
-    "message": "Description"
+    "message": "Human readable message"
   }
 }
 ```
 
+Common codes:
+
+- `RATE_LIMIT_EXCEEDED` - Too many requests
+- `INVALID_QUERY` - Missing/invalid parameters
+- `FETCH_FAILED` - Scraping error
+- `BATCH_TOO_LARGE` - Batch size > 10
+
 ---
 
-## Deployment (see DOCKER.md)
+## Usage Examples
 
-### Quick Start
+### JavaScript/TypeScript
 
-```bash
-docker-compose up -d
+```typescript
+// Health check
+const health = await fetch("http://localhost:3001/health").then((r) =>
+  r.json(),
+);
+console.log(`Uptime: ${health.uptime}s, Requests: ${health.requests_served}`);
+
+// Batch fetch
+const batch = await fetch("http://localhost:3001/api/v1/batch/anime", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    endpoints: ["/anime/naruto", "/anime/one-piece"],
+  }),
+}).then((r) => r.json());
+
+// Image proxy
+function getProxiedImage(url, size = "medium") {
+  const encoded = btoa(url);
+  return `http://localhost:3001/api/v1/proxy/image?url=${encoded}&size=${size}`;
+}
 ```
 
-### Production
+### Astro Component
 
-- Update CORS origins in both API files
-- Use Nginx reverse proxy
-- Enable HTTPS
+```astro
+---
+const health = await fetch('http://anime-api:3001/health').then(r => r.json());
+const trending = await fetch('http://manga-api:3002/api/v1/trending').then(r => r.json());
+---
+
+<div>
+  <p>API Uptime: {Math.floor(health.uptime / 3600)}h</p>
+  <p>Requests Served: {health.requests_served.toLocaleString()}</p>
+
+  {trending.data.map(manga => (
+    <img src={getProxiedImage(manga.image, 'small')} alt={manga.title} />
+  ))}
+</div>
+```
 
 ---
 
-## Performance Notes
+## Deployment
 
-### Cache TTL
+See [DOCKER.md](DOCKER.md) for Docker deployment guide.
 
-- Homepage endpoints: 5 minutes
-- Genre lists: 10 minutes
-- Detail/chapter: No cache (always fresh)
-
-### Image Proxy
-
-- Caches images: 24 hours (browser)
-- Resize quality: 85% JPEG
-- Supports PNG & JPEG
+See [RATELIMIT.md](RATELIMIT.md) for rate limiting details.
 
 ---
 
@@ -272,9 +278,12 @@ docker-compose up -d
 
 ### v1.1 (Current)
 
+- ✅ Health check with scraper status
+- ✅ Batch endpoints (anime & manga)
+- ✅ Request counter
 - ✅ Image proxy with resize
-- ✅ Response caching
-- ✅ Better error messages
+- ✅ Response caching (5-10min)
+- ✅ Rate limiting (45/450 req/min)
 
 ### v1.0
 

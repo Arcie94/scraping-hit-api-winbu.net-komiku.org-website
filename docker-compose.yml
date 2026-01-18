@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  anime-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.anime
+    container_name: anime-api
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - TZ=Asia/Jakarta
+    networks:
+      - scraper-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  manga-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.manga
+    container_name: manga-api
+    restart: unless-stopped
+    ports:
+      - "3002:3002"
+    environment:
+      - TZ=Asia/Jakarta
+    networks:
+      - scraper-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3002/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  scraper-network:
+    driver: bridge

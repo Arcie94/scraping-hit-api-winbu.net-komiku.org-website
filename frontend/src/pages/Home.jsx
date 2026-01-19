@@ -142,16 +142,44 @@ const Home = () => {
             </div>
 
             {/* Footer Info */}
-            <div className="container mx-auto px-4 pb-12">
+            <div className="container mx-auto px-4 pb-12 space-y-6">
+                {/* Usage Notes */}
                 <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-6">
-                    <h3 className="text-yellow-400 font-bold mb-2 flex items-center gap-2">
+                    <h3 className="text-yellow-400 font-bold mb-3 flex items-center gap-2">
                         ⚠️ Catatan Penggunaan
                     </h3>
-                    <ul className="text-gray-300 text-sm space-y-1 list-disc list-inside">
+                    <ul className="text-gray-300 text-sm space-y-2 list-disc list-inside">
                         <li>Klik pada endpoint untuk expand form debugger</li>
                         <li>Isi parameter yang diperlukan (bertanda *)</li>
                         <li>Klik "Kirim Request" untuk test API</li>
                         <li>Response akan ditampilkan dengan syntax highlighting</li>
+                    </ul>
+                </div>
+
+                {/* Rate Limiting */}
+                <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-6">
+                    <h3 className="text-blue-400 font-bold mb-3 flex items-center gap-2">
+                        🛡️ Rate Limiting
+                    </h3>
+                    <ul className="text-gray-300 text-sm space-y-2 list-disc list-inside">
+                        <li><strong>Limit:</strong> 60 requests per menit per IP address</li>
+                        <li><strong>Response saat limit:</strong> HTTP 429 "Rate limit exceeded"</li>
+                        <li><strong>Reset otomatis:</strong> Counter reset setiap menit</li>
+                        <li><strong>Cache:</strong> Data di-cache selama 30 menit untuk performa optimal</li>
+                    </ul>
+                </div>
+
+                {/* Tips & Troubleshooting */}
+                <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-6">
+                    <h3 className="text-purple-400 font-bold mb-3 flex items-center gap-2">
+                        💡 Tips & Troubleshooting
+                    </h3>
+                    <ul className="text-gray-300 text-sm space-y-2 list-disc list-inside">
+                        <li><strong>Response null:</strong> Coba query berbeda atau tunggu cache expire (30 menit)</li>
+                        <li><strong>Slow response:</strong> Request pertama ~2-3 detik (scraping), request selanjutnya ~100ms (cache)</li>
+                        <li><strong>CORS error:</strong> API allow all origins untuk development, update untuk production</li>
+                        <li><strong>Rate limited:</strong> Tunggu 60 detik atau gunakan IP berbeda untuk testing</li>
+                        <li><strong>Slug format:</strong> Gunakan format lowercase dengan dash (contoh: <code>one-piece</code>)</li>
                     </ul>
                 </div>
             </div>

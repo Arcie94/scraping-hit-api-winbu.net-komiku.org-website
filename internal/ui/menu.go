@@ -3,6 +3,7 @@ package ui
 import (
 	"bufio"
 	"fmt"
+	"komiku-scraper/internal/config"
 	"komiku-scraper/internal/downloader"
 	"komiku-scraper/internal/service"
 	"komiku-scraper/scraper/winbu"
@@ -505,7 +506,8 @@ func handleEpisodeWinbu(svc *service.WinbuService, scanner *bufio.Scanner, anime
 
 	fmt.Println("\nOpsi:")
 	fmt.Println("1. Streaming (Buka Browser)")
-	fmt.Println("2. Save Info Download (Untuk IDM/XDM)")
+	fmt.Println("2. Save Info Download (Untuk IDM/XDM Manual)")
+	fmt.Println("3. Download dengan XDM (OTOMATIS)")
 	fmt.Println("0. Kembali")
 
 	fmt.Print("Pilih: ")
@@ -546,6 +548,65 @@ func handleEpisodeWinbu(svc *service.WinbuService, scanner *bufio.Scanner, anime
 			err := dl.SaveAnimeInfo(animeTitle, ep.Title, epData, streamURL)
 			if err != nil {
 				fmt.Printf("Error saving info: %v\n", err)
+			}
+		case "3":
+			// Autoload Config
+			cfg, err := config.LoadConfig()
+			if err != nil {
+				log.Println("Error loading config:", err)
+				return
+			}
+
+			// Check config XDM Path
+			if cfg.XDMPath == "" {
+				fmt.Println("\n[SETUP] Path XDM belum dikonfigurasi.")
+				fmt.Println("Contoh: C:\\Program Files\\XDM\\xdm-app.exe")
+				fmt.Print("Masukkan full path ke xdm.exe: ")
+				if scanner.Scan() {
+					inputPath := strings.TrimSpace(scanner.Text())
+					if _, err := os.Stat(inputPath); os.IsNotExist(err) {
+						fmt.Println("Error: File tidak ditemukan!")
+						return
+					}
+					cfg.XDMPath = inputPath
+					if err := config.SaveConfig(cfg); err != nil {
+						fmt.Printf("Warning: Gagal menyimpan config: %v\n", err)
+					} else {
+						fmt.Println("Setup berhasil! Path disimpan.")
+					}
+				} else {
+					return
+				}
+			}
+
+			// Get URL to download (Prefer stream URL usually)
+			targetURL := ""
+
+			// Ask user choice: Stream URL or specific download link?
+			// Simplification: Try to resolve First Stream URL as it's usually the video
+			if len(epData.StreamOptions) > 0 {
+				fmt.Println("Resolving Stream URL...")
+				url, err := svc.ResolveStream(epData.StreamOptions[0])
+				if err == nil {
+					targetURL = url
+				} else {
+					fmt.Printf("Gagal resolve stream: %v\n", err)
+				}
+			}
+
+			// If stream failed, fallback to first download link if available
+			if targetURL == "" && len(epData.DownloadLinks) > 0 {
+				fmt.Println("Menggunakan link download alternatif...")
+				targetURL = epData.DownloadLinks[0].URL
+			}
+
+			if targetURL != "" {
+				err := dl.StartExternalDownload(cfg.XDMPath, targetURL)
+				if err != nil {
+					fmt.Printf("Gagal menjalankan XDM: %v\n", err)
+				}
+			} else {
+				fmt.Println("Tidak ada URL yang bisa didownload.")
 			}
 		}
 	}

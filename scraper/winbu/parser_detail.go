@@ -51,7 +51,26 @@ func ParseAnimeDetail(doc *goquery.Document) (*AnimeDetail, error) {
 			detail.Metadata["Status"] = strings.TrimSpace(strings.Replace(text, "Status :", "", 1))
 		} else if strings.Contains(text, "Duration :") {
 			detail.Metadata["Duration"] = strings.TrimSpace(strings.Replace(text, "Duration :", "", 1))
+		} else if strings.Contains(text, "Negara :") {
+			detail.Metadata["Country"] = strings.TrimSpace(strings.Replace(text, "Negara :", "", 1))
+		} else if strings.Contains(text, "Credit :") {
+			detail.Metadata["Credit"] = strings.TrimSpace(strings.Replace(text, "Credit :", "", 1))
+		} else if strings.Contains(text, "Kualitas :") {
+			detail.Metadata["Quality"] = strings.TrimSpace(strings.Replace(text, "Kualitas :", "", 1))
+		} else if strings.Contains(text, "Released :") { // Or Published in some cases? Need to verify selector or just generic handler
+			// Check if it's the date icon line
+		} else if strings.Contains(text, "Date Released :") || strings.Contains(s.Find("i.fa-calendar").AttrOr("class", ""), "fa-calendar") {
+			// Sometimes date is just text next to calendar icon
+			detail.Metadata["Released"] = strings.TrimSpace(s.Text())
 		}
+
+		// Skip Encode as requested
+		if strings.Contains(text, "Encode :") {
+			return
+		}
+
+		// Generic Fallback for other fields if needed, or specific mapped ones above.
+		// Given the request, specific mapping is safer.
 	})
 
 	return detail, nil

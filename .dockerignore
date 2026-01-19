@@ -1,28 +1,18 @@
-# Ignore build artifacts
-*.exe
-*.dll
-*.so
-*.dylib
-*.test
-*.out
-
-# Ignore binaries
-anime-api
-manga-api
-scraper
+# Git
+.git
+.gitignore
 
 # Docker
+Dockerfile
+docker-compose.yml
 .dockerignore
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
+# Build
+scraper-download.exe
+*.exe
+*.log
+tmp/
 
-# OS
-.DS_Store
-Thumbs.db
-
-# Test files
-*.html
+# Data
+Downloads/
+brain/

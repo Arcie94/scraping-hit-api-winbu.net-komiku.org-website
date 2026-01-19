@@ -2,6 +2,7 @@ package main
 
 import (
 	"komiku-scraper/internal/handler"
+	"komiku-scraper/internal/middleware"
 	"komiku-scraper/internal/routes"
 	"komiku-scraper/internal/service"
 	"komiku-scraper/scraper/cache"
@@ -15,10 +16,12 @@ import (
 )
 
 func main() {
+	log.Println("Starting Komiku & Winbu Scraper API...")
+
 	// 1. Initialize Cache
 	c := cache.New()
 
-	// 2. Initialize Clients
+	// 2. Initialize HTTP Clients
 	komikuClient := komiku.NewKomikuClient()
 	winbuClient := winbu.NewWinbuClient()
 
@@ -39,6 +42,7 @@ func main() {
 		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
 		AllowMethods: "GET, POST, PUT, DELETE, OPTIONS",
 	}))
+	app.Use(middleware.RateLimiter()) // Rate limiting: 60 req/min per IP
 
 	// 5. Setup Routes
 	routes.SetupRoutes(app, komikuHandler, winbuHandler)

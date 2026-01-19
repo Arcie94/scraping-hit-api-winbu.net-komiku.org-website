@@ -1,22 +1,25 @@
-# Exclude frontend node_modules from git
+# Binaries (exclude scraper-download.exe - keep for CLI use)
+*.exe
+!scraper-download.exe
+
+# OS-specific
+*.dll
+*.so
+*.dylib
+
+# Frontend build artifacts
 frontend/node_modules/
 frontend/dist/
 frontend/.vite/
 
-# Exclude brain/artifacts
+# Antigravity brain/artifacts
 brain/
-
-# Binaries
-*.exe
-*.dll
-*.so
-*.dylib
-anime-api
-manga-api
 
 # Test files
 *.test
 *.out
+*.html
+!frontend/index.html
 
 # IDE
 .vscode/
@@ -37,4 +40,8 @@ vendor/
 # Docker volumes
 data/
 
+# Downloads directory
 Downloads/
+
+# Test scripts (optional - uncomment if you want to exclude)
+# test-*.sh

@@ -1,6 +1,7 @@
 package common
 
 import (
+	"crypto/tls"
 	"log"
 	"net/http"
 	"time"
@@ -14,9 +15,18 @@ type BaseClient struct {
 
 // NewBaseClient creates a new BaseClient with default configuration
 func NewBaseClient(serviceName string) *BaseClient {
+	// Create TLS config that skips certificate verification
+	// This is needed because some sites (like Komiku) have expired certificates
+	transport := &http.Transport{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true, // Skip SSL verification
+		},
+	}
+
 	return &BaseClient{
 		Client: &http.Client{
-			Timeout: DefaultTimeout * time.Second,
+			Timeout:   DefaultTimeout * time.Second,
+			Transport: transport,
 		},
 		ServiceName: serviceName,
 	}

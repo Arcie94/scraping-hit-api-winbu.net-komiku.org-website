@@ -1,7 +1,9 @@
 package service
 
 import (
+	"fmt"
 	"io"
+	"komiku-scraper/scraper/cache"
 	"komiku-scraper/scraper/komiku"
 	"log"
 	"net/http"
@@ -12,13 +14,20 @@ import (
 // KomikuService handles data fetching logic
 type KomikuService struct {
 	Client *komiku.KomikuClient
+	Cache  *cache.Cache
 }
 
-func NewKomikuService(client *komiku.KomikuClient) *KomikuService {
-	return &KomikuService{Client: client}
+func NewKomikuService(client *komiku.KomikuClient, c *cache.Cache) *KomikuService {
+	return &KomikuService{Client: client, Cache: c}
 }
 
 func (s *KomikuService) FetchAndParseList(url string) ([]komiku.Manga, error) {
+	cacheKey := fmt.Sprintf(cache.KomikuSearchKey, url)
+	if val, found := s.Cache.Get(cacheKey); found {
+		log.Printf("[Komiku] Cache HIT for list: %s", url)
+		return val.([]komiku.Manga), nil
+	}
+
 	log.Printf("[Komiku] Fetching manga list from: %s", url)
 	req, _ := http.NewRequest("GET", url, nil)
 	resp, err := s.Client.Do(req)
@@ -39,11 +48,18 @@ func (s *KomikuService) FetchAndParseList(url string) ([]komiku.Manga, error) {
 	result, err := komiku.ParseMangaList(doc)
 	if err == nil {
 		log.Printf("[Komiku] Successfully parsed %d manga from list", len(result))
+		s.Cache.Set(cacheKey, result, cache.SearchTTL)
 	}
 	return result, err
 }
 
 func (s *KomikuService) FetchAndParseDetail(url string) (*komiku.MangaDetail, error) {
+	cacheKey := fmt.Sprintf(cache.KomikuDetailKey, url)
+	if val, found := s.Cache.Get(cacheKey); found {
+		log.Printf("[Komiku] Cache HIT for detail: %s", url)
+		return val.(*komiku.MangaDetail), nil
+	}
+
 	log.Printf("[Komiku] Fetching manga detail from: %s", url)
 	req, _ := http.NewRequest("GET", url, nil)
 	resp, err := s.Client.Do(req)
@@ -64,11 +80,17 @@ func (s *KomikuService) FetchAndParseDetail(url string) (*komiku.MangaDetail, er
 	result, err := komiku.ParseMangaDetail(doc)
 	if err == nil && result != nil {
 		log.Printf("[Komiku] Successfully parsed manga: %s (%d chapters)", result.Title, len(result.Chapters))
+		s.Cache.Set(cacheKey, result, cache.DetailTTL)
 	}
 	return result, err
 }
 
 func (s *KomikuService) FetchHomeData() (*komiku.HomeData, error) {
+	if val, found := s.Cache.Get(cache.KomikuHomeKey); found {
+		log.Printf("[Komiku] Cache HIT for home data")
+		return val.(*komiku.HomeData), nil
+	}
+
 	req, _ := http.NewRequest("GET", "https://komiku.org/", nil)
 	resp, err := s.Client.Do(req)
 	if err != nil {
@@ -81,10 +103,20 @@ func (s *KomikuService) FetchHomeData() (*komiku.HomeData, error) {
 		return nil, err
 	}
 
-	return komiku.ParseHomeData(doc)
+	result, err := komiku.ParseHomeData(doc)
+	if err == nil {
+		s.Cache.Set(cache.KomikuHomeKey, result, cache.HomeTTL)
+	}
+	return result, err
 }
 
 func (s *KomikuService) FetchChapterImages(url string) ([]komiku.ChapterImage, error) {
+	cacheKey := fmt.Sprintf(cache.KomikuChapterKey, url)
+	if val, found := s.Cache.Get(cacheKey); found {
+		log.Printf("[Komiku] Cache HIT for chapter: %s", url)
+		return val.([]komiku.ChapterImage), nil
+	}
+
 	log.Printf("[Komiku] Fetching chapter images from: %s", url)
 	req, _ := http.NewRequest("GET", url, nil)
 	resp, err := s.Client.Do(req)
@@ -108,6 +140,7 @@ func (s *KomikuService) FetchChapterImages(url string) ([]komiku.ChapterImage, e
 	result, err := komiku.ParseChapterImages(string(bodyBytes))
 	if err == nil {
 		log.Printf("[Komiku] Successfully parsed %d images from chapter", len(result))
+		s.Cache.Set(cacheKey, result, cache.ChapterTTL)
 	} else {
 		log.Printf("[Komiku] Error parsing chapter images: %v", err)
 	}

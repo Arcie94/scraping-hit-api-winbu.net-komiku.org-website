@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"io"
+	"komiku-scraper/scraper/cache"
 	"komiku-scraper/scraper/winbu"
 	"log"
 	"net/http"
@@ -14,13 +15,20 @@ import (
 
 type WinbuService struct {
 	Client *winbu.WinbuClient
+	Cache  *cache.Cache
 }
 
-func NewWinbuService(client *winbu.WinbuClient) *WinbuService {
-	return &WinbuService{Client: client}
+func NewWinbuService(client *winbu.WinbuClient, c *cache.Cache) *WinbuService {
+	return &WinbuService{Client: client, Cache: c}
 }
 
 func (s *WinbuService) FetchSearch(keyword string) ([]winbu.Anime, error) {
+	cacheKey := fmt.Sprintf(cache.WinbuSearchKey, keyword)
+	if val, found := s.Cache.Get(cacheKey); found {
+		log.Printf("[Winbu] Cache HIT for search: %s", keyword)
+		return val.([]winbu.Anime), nil
+	}
+
 	// Winbu search URL: https://winbu.net/?s=keyword
 	// Replace space with +
 	req, _ := http.NewRequest("GET", "https://winbu.net/?s="+keyword, nil)
@@ -35,10 +43,20 @@ func (s *WinbuService) FetchSearch(keyword string) ([]winbu.Anime, error) {
 		return nil, err
 	}
 
-	return winbu.ParseSearch(doc)
+	result, err := winbu.ParseSearch(doc)
+	if err == nil {
+		s.Cache.Set(cacheKey, result, cache.SearchTTL)
+	}
+	return result, err
 }
 
 func (s *WinbuService) FetchAndParseDetail(url string) (*winbu.AnimeDetail, error) {
+	cacheKey := fmt.Sprintf(cache.WinbuDetailKey, url)
+	if val, found := s.Cache.Get(cacheKey); found {
+		log.Printf("[Winbu] Cache HIT for detail: %s", url)
+		return val.(*winbu.AnimeDetail), nil
+	}
+
 	if !strings.HasPrefix(url, "http") {
 		url = "https://winbu.net" + url
 	}
@@ -68,10 +86,17 @@ func (s *WinbuService) FetchAndParseDetail(url string) (*winbu.AnimeDetail, erro
 		})
 	}
 
+	s.Cache.Set(cacheKey, result, cache.DetailTTL)
 	return result, nil
 }
 
 func (s *WinbuService) FetchEpisode(url string) (*winbu.EpisodePageData, error) {
+	cacheKey := fmt.Sprintf(cache.WinbuEpisodeKey, url)
+	if val, found := s.Cache.Get(cacheKey); found {
+		log.Printf("[Winbu] Cache HIT for episode: %s", url)
+		return val.(*winbu.EpisodePageData), nil
+	}
+
 	if !strings.HasPrefix(url, "http") {
 		url = "https://winbu.net" + url
 	}
@@ -88,11 +113,20 @@ func (s *WinbuService) FetchEpisode(url string) (*winbu.EpisodePageData, error) 
 		return nil, err
 	}
 
-	return winbu.ParseEpisodePage(doc)
+	result, err := winbu.ParseEpisodePage(doc)
+	if err == nil {
+		s.Cache.Set(cacheKey, result, cache.ChapterTTL)
+	}
+	return result, err
 }
 
 // FetchHomeData loads homepage data for top series, latest movies, latest anime, and genres
 func (s *WinbuService) FetchHomeData() (*winbu.HomeData, error) {
+	if val, found := s.Cache.Get(cache.WinbuHomeKey); found {
+		log.Printf("[Winbu] Cache HIT for home data")
+		return val.(*winbu.HomeData), nil
+	}
+
 	req, _ := http.NewRequest("GET", "https://winbu.net", nil)
 	resp, err := s.Client.Do(req)
 	if err != nil {
@@ -105,7 +139,11 @@ func (s *WinbuService) FetchHomeData() (*winbu.HomeData, error) {
 		return nil, err
 	}
 
-	return winbu.ParseHome(doc)
+	result, err := winbu.ParseHome(doc)
+	if err == nil {
+		s.Cache.Set(cache.WinbuHomeKey, result, cache.HomeTTL)
+	}
+	return result, err
 }
 
 func (s *WinbuService) ResolveStream(opt winbu.StreamOption) (string, error) {

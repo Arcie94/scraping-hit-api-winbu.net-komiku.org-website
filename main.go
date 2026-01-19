@@ -3,6 +3,7 @@ package main
 import (
 	"komiku-scraper/internal/service"
 	"komiku-scraper/internal/ui"
+	"komiku-scraper/scraper/cache"
 	"komiku-scraper/scraper/komiku"
 	"komiku-scraper/scraper/winbu"
 )
@@ -14,9 +15,12 @@ func main() {
 	// 1b. Initialize Winbu Client
 	winbuClient := winbu.NewWinbuClient()
 
+	// 1c. Initialize Cache
+	appCache := cache.New()
+
 	// 2. Initialize Service Layer (Business Logic)
-	komikuSvc := service.NewKomikuService(komikuClient)
-	winbuSvc := service.NewWinbuService(winbuClient)
+	komikuSvc := service.NewKomikuService(komikuClient, appCache)
+	winbuSvc := service.NewWinbuService(winbuClient, appCache)
 
 	// 3. Start UI (Presentation Layer)
 	ui.StartMenu(komikuSvc, winbuSvc)

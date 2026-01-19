@@ -38,6 +38,30 @@ func (h *WinbuHandler) Search(c *fiber.Ctx) error {
 	return c.JSON(results)
 }
 
+// Drama returns drama/donghua listings
+func (h *WinbuHandler) Drama(c *fiber.Ctx) error {
+	results, err := h.Service.FetchDrama()
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"error":   "Failed to fetch drama",
+			"details": err.Error(),
+		})
+	}
+	return c.JSON(results)
+}
+
+// Genres returns all genre listings
+func (h *WinbuHandler) Genres(c *fiber.Ctx) error {
+	results, err := h.Service.FetchGenres()
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"error":   "Failed to fetch genres",
+			"details": err.Error(),
+		})
+	}
+	return c.JSON(results)
+}
+
 // Detail Handler (Anime Info)
 func (h *WinbuHandler) Detail(c *fiber.Ctx) error {
 	slug := c.Params("endpoint")

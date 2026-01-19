@@ -82,6 +82,18 @@ const Home = () => {
                         { name: 'slug', in: 'path', placeholder: 'Contoh: jujutsu-kaisen-s2-episode-1', required: true }
                     ]
                 },
+                {
+                    method: "GET",
+                    path: "/api/v1/winbu/drama",
+                    description: "Anime/Donghua Terbaru",
+                    params: []
+                },
+                {
+                    method: "GET",
+                    path: "/api/v1/winbu/genres",
+                    description: "List semua genre anime",
+                    params: []
+                },
             ]
         }
     ];

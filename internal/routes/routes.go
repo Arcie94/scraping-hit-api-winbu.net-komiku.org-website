@@ -23,4 +23,6 @@ func SetupRoutes(app *fiber.App, komikuHandler *handler.KomikuHandler, winbuHand
 	winbu.Get("/search", winbuHandler.Search)
 	winbu.Get("/detail/:endpoint", winbuHandler.Detail) // Handle both anime/movie via logic
 	winbu.Get("/episode/:endpoint", winbuHandler.Episode)
+	winbu.Get("/drama", winbuHandler.Drama)
+	winbu.Get("/genres", winbuHandler.Genres)
 }

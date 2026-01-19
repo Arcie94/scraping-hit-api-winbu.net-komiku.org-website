@@ -90,6 +90,50 @@ func (s *WinbuService) FetchAndParseDetail(url string) (*winbu.AnimeDetail, erro
 	return result, nil
 }
 
+// FetchDrama gets latest drama/donghua listings
+func (s *WinbuService) FetchDrama() (interface{}, error) {
+	cacheKey := "winbu:drama"
+
+	if cached, found := s.Cache.Get(cacheKey); found {
+		log.Println("[Winbu] Cache HIT for drama")
+		return cached, nil
+	}
+
+	log.Println("[Winbu] Fetching drama from source...")
+	// Reuse home scraper
+	homeData, err := s.FetchHomeData()
+	if err != nil {
+		return nil, err
+	}
+
+	// Return combined latest (LatestAnime + InternationalSeries for drama/donghua)
+	result := append(homeData.LatestAnime, homeData.InternationalSeries...)
+	s.Cache.Set(cacheKey, result, cache.HomeTTL)
+	return result, nil
+}
+
+// FetchGenres gets all genre listings
+func (s *WinbuService) FetchGenres() (interface{}, error) {
+	cacheKey := "winbu:genres"
+
+	if cached, found := s.Cache.Get(cacheKey); found {
+		log.Println("[Winbu] Cache HIT for genres")
+		return cached, nil
+	}
+
+	log.Println("[Winbu] Fetching genres from source...")
+	// Reuse home scraper
+	homeData, err := s.FetchHomeData()
+	if err != nil {
+		return nil, err
+	}
+
+	// Return only Genres
+	result := homeData.Genres
+	s.Cache.Set(cacheKey, result, cache.HomeTTL)
+	return result, nil
+}
+
 func (s *WinbuService) FetchEpisode(url string) (*winbu.EpisodePageData, error) {
 	cacheKey := fmt.Sprintf(cache.WinbuEpisodeKey, url)
 	if val, found := s.Cache.Get(cacheKey); found {

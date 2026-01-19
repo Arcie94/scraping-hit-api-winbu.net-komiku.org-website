@@ -114,5 +114,48 @@ func ParseEpisodePage(doc *goquery.Document) (*EpisodePageData, error) {
 		data.PrevEpisodeEndpoint = doc.Find(".fl a").AttrOr("href", "")
 	}
 
+	// Download Links Parsing
+	// Attempt to find download links in common containers
+	// Strategy 1: .download-eps
+	doc.Find(".download-eps a").Each(func(i int, s *goquery.Selection) {
+		link := DownloadLink{
+			Server:  strings.TrimSpace(s.Text()),
+			URL:     s.AttrOr("href", ""),
+			Quality: "Unknown", // Often mixed in text
+		}
+
+		// Try to extract quality from parent or text
+		if strings.Contains(link.Server, "360") {
+			link.Quality = "360p"
+		}
+		if strings.Contains(link.Server, "480") {
+			link.Quality = "480p"
+		}
+		if strings.Contains(link.Server, "720") {
+			link.Quality = "720p"
+		}
+		if strings.Contains(link.Server, "1080") {
+			link.Quality = "1080p"
+		}
+
+		if link.URL != "" && !strings.HasPrefix(link.URL, "javascript") {
+			data.DownloadLinks = append(data.DownloadLinks, link)
+		}
+	})
+
+	// Strategy 2: #download container
+	if len(data.DownloadLinks) == 0 {
+		doc.Find("#download a").Each(func(i int, s *goquery.Selection) {
+			link := DownloadLink{
+				Server:  strings.TrimSpace(s.Text()),
+				URL:     s.AttrOr("href", ""),
+				Quality: "Unknown",
+			}
+			if link.URL != "" {
+				data.DownloadLinks = append(data.DownloadLinks, link)
+			}
+		})
+	}
+
 	return data, nil
 }

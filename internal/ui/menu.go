@@ -3,6 +3,7 @@ package ui
 import (
 	"bufio"
 	"fmt"
+	"komiku-scraper/internal/downloader"
 	"komiku-scraper/internal/service"
 	"komiku-scraper/scraper/winbu"
 	"log"
@@ -10,8 +11,14 @@ import (
 	"strings"
 )
 
+// Global downloader instance
+var dl *downloader.Downloader
+
 // StartMenu starts the interactive CLI
 func StartMenu(komikuSvc *service.KomikuService, winbuSvc *service.WinbuService) {
+	// Initialize Downloader
+	dl = downloader.New()
+
 	scanner := bufio.NewScanner(os.Stdin)
 
 	for {
@@ -156,13 +163,7 @@ func menuKomiku(svc *service.KomikuService, scanner *bufio.Scanner) {
 						url = "https://komiku.org" + url
 					}
 
-					images, err := svc.FetchChapterImages(url)
-					if err != nil {
-						log.Println("Error:", err)
-						continue
-					}
-					fmt.Printf("\nDitemukan %d gambar:\n", len(images))
-					OpenInBrowser("Read Chapter", images)
+					handleChapter(svc, scanner, url, "Unknown Manga", "Chapter")
 				}
 
 			case "6": // Recommendations
@@ -203,199 +204,6 @@ func menuKomiku(svc *service.KomikuService, scanner *bufio.Scanner) {
 						break
 					}
 				}
-			}
-		}
-	}
-}
-
-func menuWinbu(svc *service.WinbuService, scanner *bufio.Scanner) {
-	for {
-		fmt.Println("\n--- WINBU PROVIDER ---")
-		fmt.Println("1. Search Anime (Kata Kunci)")
-		fmt.Println("2. Top 10 Anime")
-		fmt.Println("3. Top 10 Film")
-		fmt.Println("4. Film Terbaru")
-		fmt.Println("5. Anime/Donghua Terbaru")
-		fmt.Println("6. Drama")
-		fmt.Println("7. List Genre")
-		fmt.Println("0. Kembali")
-
-		fmt.Print("Pilihan: ")
-		if scanner.Scan() {
-			switch scanner.Text() {
-			case "1":
-				fmt.Print("Masukkan Kata Kunci: ")
-				if scanner.Scan() {
-					keyword := scanner.Text()
-					res, err := svc.FetchSearch(strings.ReplaceAll(keyword, " ", "+"))
-					if err != nil {
-						fmt.Println("Error:", err)
-						continue
-					}
-					fmt.Printf("\nHasil %d anime:\n", len(res))
-					for i, a := range res {
-						fmt.Printf("%d. %s\n   %s | %s\n", i+1, a.Title, a.Status, a.Type)
-					}
-
-					if len(res) > 0 {
-						fmt.Print("\nPilih nomor untuk detail (0 batal): ")
-						if scanner.Scan() {
-							var sel int
-							fmt.Sscanf(scanner.Text(), "%d", &sel)
-							if sel > 0 && sel <= len(res) {
-								handleDetailWinbu(svc, scanner, res[sel-1].Endpoint)
-							}
-						}
-					}
-				}
-			case "2": // Top 10 Anime
-				fmt.Println("Mengambil Top 10 Anime...")
-				data, err := svc.FetchHomeData()
-				if err != nil {
-					log.Println("Error:", err)
-					continue
-				}
-				if len(data.TopSeries) > 0 {
-					fmt.Println("\n🏆 Top 10 Anime:")
-					for i, a := range data.TopSeries {
-						fmt.Printf("%d. %s [%s] (%s)\n", i+1, a.Title, a.Rating, a.Status)
-					}
-
-					fmt.Print("\nPilih nomor untuk detail (0 batal): ")
-					if scanner.Scan() {
-						var sel int
-						fmt.Sscanf(scanner.Text(), "%d", &sel)
-						if sel > 0 && sel <= len(data.TopSeries) {
-							handleDetailWinbu(svc, scanner, data.TopSeries[sel-1].Endpoint)
-						}
-					}
-				} else {
-					fmt.Println("Tidak ada data ditemukan.")
-				}
-
-			case "3": // Top 10 Film (NEW)
-				fmt.Println("Mengambil Top 10 Film...")
-				data, err := svc.FetchHomeData()
-				if err != nil {
-					log.Println("Error:", err)
-					continue
-				}
-				if len(data.TopMovies) > 0 {
-					fmt.Println("\n🏆 Top 10 Film:")
-					for i, a := range data.TopMovies {
-						fmt.Printf("%d. %s [%s] (%s)\n", i+1, a.Title, a.Rating, a.Status)
-					}
-
-					fmt.Print("\nPilih nomor untuk detail (0 batal): ")
-					if scanner.Scan() {
-						var sel int
-						fmt.Sscanf(scanner.Text(), "%d", &sel)
-						if sel > 0 && sel <= len(data.TopMovies) {
-							handleDetailWinbu(svc, scanner, data.TopMovies[sel-1].Endpoint)
-						}
-					}
-				} else {
-					fmt.Println("Tidak ada data Top Film ditemukan atau filter parser perlu diperiksa.")
-				}
-
-			case "4": // Latest Movies
-				fmt.Println("Mengambil Film Terbaru...")
-				data, err := svc.FetchHomeData()
-				if err != nil {
-					log.Println("Error:", err)
-					continue
-				}
-				if len(data.LatestMovies) > 0 {
-					fmt.Println("\n🎬 Film Terbaru:")
-					for i, a := range data.LatestMovies {
-						fmt.Printf("%d. %s [%s]\n", i+1, a.Title, a.Rating)
-						if i >= 19 {
-							break
-						} // Limit display
-					}
-
-					fmt.Print("\nPilih nomor untuk detail (0 batal): ")
-					if scanner.Scan() {
-						var sel int
-						fmt.Sscanf(scanner.Text(), "%d", &sel)
-						if sel > 0 && sel <= len(data.LatestMovies) {
-							handleDetailWinbu(svc, scanner, data.LatestMovies[sel-1].Endpoint)
-						}
-					}
-				}
-
-			case "5": // Latest Anime
-				fmt.Println("Mengambil Anime/Donghua Terbaru...")
-				data, err := svc.FetchHomeData()
-				if err != nil {
-					log.Println("Error:", err)
-					continue
-				}
-				if len(data.LatestAnime) > 0 {
-					fmt.Println("\n🆕 Anime/Donghua Terbaru:")
-					for i, a := range data.LatestAnime {
-						fmt.Printf("%d. %s [%s]\n", i+1, a.Title, a.Status) // Status used for episode
-						if i >= 19 {
-							break
-						} // Limit display
-					}
-
-					fmt.Print("\nPilih nomor untuk detail (0 batal): ")
-					if scanner.Scan() {
-						var sel int
-						fmt.Sscanf(scanner.Text(), "%d", &sel)
-						if sel > 0 && sel <= len(data.LatestAnime) {
-							handleDetailWinbu(svc, scanner, data.LatestAnime[sel-1].Endpoint)
-						}
-					}
-				}
-
-			case "6": // International Series
-				fmt.Println("Mengambil Drama Terbaru...")
-				data, err := svc.FetchHomeData()
-				if err != nil {
-					log.Println("Error:", err)
-					continue
-				}
-				if len(data.InternationalSeries) > 0 {
-					fmt.Println("\n📺 Drama:")
-					for i, a := range data.InternationalSeries {
-						fmt.Printf("%d. %s [%s]\n", i+1, a.Title, a.Status)
-						if i >= 19 {
-							break
-						}
-					}
-
-					fmt.Print("\nPilih nomor untuk detail (0 batal): ")
-					if scanner.Scan() {
-						var sel int
-						fmt.Sscanf(scanner.Text(), "%d", &sel)
-						if sel > 0 && sel <= len(data.InternationalSeries) {
-							handleDetailWinbu(svc, scanner, data.InternationalSeries[sel-1].Endpoint)
-						}
-					}
-				}
-
-			case "7": // List Genre
-				fmt.Println("Mengambil Daftar Genre...")
-				data, err := svc.FetchHomeData()
-				if err != nil {
-					log.Println("Error:", err)
-					continue
-				}
-				if len(data.Genres) > 0 {
-					fmt.Println("\n📂 Genre Tersedia:")
-					for i, g := range data.Genres {
-						fmt.Printf("%d. %s\n", i+1, g.Name)
-					}
-					// Note: Selecting genre is not implemented yet as it requires fetching category/search result parsing
-					fmt.Println("\n(Pilih genre belum diimplementasikan, fitur hanya menampilkan list saat ini)")
-				}
-
-			case "0":
-				return
-			default:
-				fmt.Println("Pilihan tidak valid")
 			}
 		}
 	}
@@ -442,18 +250,162 @@ func handleDetail(svc *service.KomikuService, scanner *bufio.Scanner, slug strin
 			fmt.Sscanf(scanner.Text(), "%d", &sel)
 			if sel > 0 && sel <= limit {
 				targetChapter := detail.Chapters[sel-1]
-				fmt.Printf("Membaca %s...\n", targetChapter.Title)
-
-				images, err := svc.FetchChapterImages("https://komiku.org" + targetChapter.Endpoint)
-				if err != nil {
-					log.Println("Error:", err)
-					return
-				}
-
-				fmt.Printf("\nDitemukan %d gambar:\n", len(images))
-				OpenInBrowser(targetChapter.Title, images)
+				handleChapter(svc, scanner, "https://komiku.org"+targetChapter.Endpoint, detail.Title, targetChapter.Title)
 			}
 		}
+	}
+}
+
+func handleChapter(svc *service.KomikuService, scanner *bufio.Scanner, url, mangaTitle, chapterTitle string) {
+	fmt.Printf("Membaca %s...\n", chapterTitle)
+
+	images, err := svc.FetchChapterImages(url)
+	if err != nil {
+		log.Println("Error:", err)
+		return
+	}
+
+	fmt.Printf("\nDitemukan %d gambar.\n", len(images))
+	fmt.Println("Pilihan:")
+	fmt.Println("1. Buka di Browser")
+	fmt.Println("2. Download Gambar (Offline)")
+	fmt.Println("0. Kembali")
+
+	fmt.Print("Pilih: ")
+	if scanner.Scan() {
+		switch scanner.Text() {
+		case "1":
+			OpenInBrowser(chapterTitle, images)
+		case "2":
+			err := dl.DownloadChapter(mangaTitle, chapterTitle, images)
+			if err != nil {
+				fmt.Printf("Error downloading: %v\n", err)
+			}
+		}
+	}
+}
+
+func menuWinbu(svc *service.WinbuService, scanner *bufio.Scanner) {
+	for {
+		fmt.Println("\n--- WINBU PROVIDER ---")
+		fmt.Println("1. Search Anime (Kata Kunci)")
+		fmt.Println("2. Top 10 Anime")
+		fmt.Println("3. Top 10 Film")
+		fmt.Println("4. Film Terbaru")
+		fmt.Println("5. Anime/Donghua Terbaru")
+		fmt.Println("6. Drama")
+		fmt.Println("7. List Genre")
+		fmt.Println("0. Kembali")
+
+		fmt.Print("Pilihan: ")
+		if scanner.Scan() {
+			switch scanner.Text() {
+			case "1":
+				fmt.Print("Masukkan Kata Kunci: ")
+				if scanner.Scan() {
+					keyword := scanner.Text()
+					res, err := svc.FetchSearch(strings.ReplaceAll(keyword, " ", "+"))
+					if err != nil {
+						fmt.Println("Error:", err)
+						continue
+					}
+					fmt.Printf("\nHasil %d anime:\n", len(res))
+					for i, a := range res {
+						fmt.Printf("%d. %s\n   %s | %s\n", i+1, a.Title, a.Status, a.Type)
+					}
+
+					if len(res) > 0 {
+						fmt.Print("\nPilih nomor untuk detail (0 batal): ")
+						if scanner.Scan() {
+							var sel int
+							fmt.Sscanf(scanner.Text(), "%d", &sel)
+							if sel > 0 && sel <= len(res) {
+								handleDetailWinbu(svc, scanner, res[sel-1].Endpoint)
+							}
+						}
+					}
+				}
+			case "2": // Top 10 Anime
+				doFetchHomeList(svc, scanner, "TopSeries", "Top 10 Anime")
+
+			case "3": // Top 10 Film (NEW)
+				doFetchHomeList(svc, scanner, "TopMovies", "Top 10 Film")
+
+			case "4": // Latest Movies
+				doFetchHomeList(svc, scanner, "LatestMovies", "Film Terbaru")
+
+			case "5": // Latest Anime
+				doFetchHomeList(svc, scanner, "LatestAnime", "Anime/Donghua Terbaru")
+
+			case "6": // International Series
+				doFetchHomeList(svc, scanner, "InternationalSeries", "Drama")
+
+			case "7": // List Genre
+				fmt.Println("Mengambil Daftar Genre...")
+				data, err := svc.FetchHomeData()
+				if err != nil {
+					log.Println("Error:", err)
+					continue
+				}
+				if len(data.Genres) > 0 {
+					fmt.Println("\n📂 Genre Tersedia:")
+					for i, g := range data.Genres {
+						fmt.Printf("%d. %s\n", i+1, g.Name)
+					}
+					fmt.Println("\n(Pilih genre belum diimplementasikan, fitur hanya menampilkan list saat ini)")
+				}
+
+			case "0":
+				return
+			default:
+				fmt.Println("Pilihan tidak valid")
+			}
+		}
+	}
+}
+
+// Helper to deduce list and handle selection to reduce duplication
+func doFetchHomeList(svc *service.WinbuService, scanner *bufio.Scanner, field string, label string) {
+	fmt.Printf("Mengambil %s...\n", label)
+	data, err := svc.FetchHomeData()
+	if err != nil {
+		log.Println("Error:", err)
+		return
+	}
+
+	var list []winbu.Anime
+	switch field {
+	case "TopSeries":
+		list = data.TopSeries
+	case "TopMovies":
+		list = data.TopMovies
+	case "LatestMovies":
+		list = data.LatestMovies
+	case "LatestAnime":
+		list = data.LatestAnime
+	case "InternationalSeries":
+		list = data.InternationalSeries
+	}
+
+	if len(list) > 0 {
+		fmt.Printf("\n%s:\n", label)
+		for i, a := range list {
+			fmt.Printf("%d. %s [%s] (%s)\n", i+1, a.Title, a.Rating, a.Status)
+			if i >= 19 {
+				break
+			}
+		}
+
+		fmt.Print("\nPilih nomor untuk detail (0 batal): ")
+		if scanner.Scan() {
+			var sel int
+			fmt.Sscanf(scanner.Text(), "%d", &sel)
+			if sel > 0 && sel <= len(list) {
+				handleDetailWinbu(svc, scanner, list[sel-1].Endpoint)
+			}
+		}
+	} else {
+		fmt.Println("Tidak ada data ditemukan.")
 	}
 }
 
@@ -501,6 +453,10 @@ func handleDetailWinbu(svc *service.WinbuService, scanner *bufio.Scanner, slug s
 				fmt.Printf("%d. %s\n", i+1, ep.Title)
 			}
 
+			if len(detail.Episodes) > 5 {
+				fmt.Printf("... (total %d episodes)\n", len(detail.Episodes))
+			}
+
 			fmt.Print("\nPilih nomor episode untuk nonton (0 kembali): ")
 			if scanner.Scan() {
 				var sel int
@@ -512,37 +468,52 @@ func handleDetailWinbu(svc *service.WinbuService, scanner *bufio.Scanner, slug s
 		}
 
 		if targetEpisode != nil {
-			fmt.Printf("Mengambil data episode %s...\n", targetEpisode.Title)
-			epData, err := svc.FetchEpisode(targetEpisode.Endpoint)
-			if err != nil {
-				log.Println("Error fetching episode:", err)
-				return
+			handleEpisodeWinbu(svc, scanner, detail.Title, targetEpisode)
+		}
+	}
+}
+
+func handleEpisodeWinbu(svc *service.WinbuService, scanner *bufio.Scanner, animeTitle string, ep *winbu.Episode) {
+	fmt.Printf("Mengambil data episode %s...\n", ep.Title)
+	epData, err := svc.FetchEpisode(ep.Endpoint)
+	if err != nil {
+		log.Println("Error fetching episode:", err)
+		return
+	}
+
+	fmt.Printf("\n--- %s ---\n", epData.Title)
+
+	// Show Stream Options
+	if len(epData.StreamOptions) > 0 {
+		fmt.Println("\nServer Stream:")
+		for i, opt := range epData.StreamOptions {
+			if opt.Quality != "" {
+				fmt.Printf("%d. %s [%s]\n", i+1, opt.Server, opt.Quality)
+			} else {
+				fmt.Printf("%d. %s\n", i+1, opt.Server)
 			}
+		}
+	}
 
-			fmt.Printf("\n--- %s ---\n", epData.Title)
+	// Show Download Links
+	if len(epData.DownloadLinks) > 0 {
+		fmt.Println("\nLink Download Langsung:")
+		for _, link := range epData.DownloadLinks {
+			fmt.Printf("- %s [%s]: %s\n", link.Server, link.Quality, link.URL)
+		}
+	}
 
-			// Show Stream Options
+	fmt.Println("\nOpsi:")
+	fmt.Println("1. Streaming (Buka Browser)")
+	fmt.Println("2. Save Info Download (Untuk IDM/XDM)")
+	fmt.Println("0. Kembali")
+
+	fmt.Print("Pilih: ")
+	if scanner.Scan() {
+		switch scanner.Text() {
+		case "1":
 			if len(epData.StreamOptions) > 0 {
-				fmt.Println("\nServer Stream:")
-				for i, opt := range epData.StreamOptions {
-					if opt.Quality != "" {
-						fmt.Printf("%d. %s [%s]\n", i+1, opt.Server, opt.Quality)
-					} else {
-						fmt.Printf("%d. %s\n", i+1, opt.Server)
-					}
-				}
-			}
-
-			// Show Download Links
-			if len(epData.DownloadLinks) > 0 {
-				fmt.Println("\nLink Download:")
-				for _, link := range epData.DownloadLinks {
-					fmt.Printf("- %s [%s]: %s\n", link.Server, link.Quality, link.URL)
-				}
-			}
-
-			if len(epData.StreamOptions) > 0 {
-				fmt.Print("\nPilih server untuk streaming (0 untuk batal): ")
+				fmt.Print("\nPilih server streaming (nomor): ")
 				if scanner.Scan() {
 					var sSel int
 					fmt.Sscanf(scanner.Text(), "%d", &sSel)
@@ -554,21 +525,27 @@ func handleDetailWinbu(svc *service.WinbuService, scanner *bufio.Scanner, slug s
 							log.Println("Error resolving stream:", err)
 						} else {
 							fmt.Printf("\nVIDEO URL: %s\n", vidURL)
-
-							fmt.Print("Buka player di browser? (y/n, default n): ")
-							if scanner.Scan() {
-								ans := strings.ToLower(scanner.Text())
-								if ans == "y" || ans == "yes" {
-									OpenURL(vidURL)
-								} else {
-									fmt.Println("Silahkan copy URL di atas ke player favorit Anda.")
-								}
-							}
+							OpenURL(vidURL)
 						}
 					}
 				}
 			} else {
-				fmt.Println("Tidak ada opsi streaming tersedia.")
+				fmt.Println("Tidak ada opsi streaming.")
+			}
+		case "2":
+			// Try to resolve stream first to include in info file
+			streamURL := ""
+			if len(epData.StreamOptions) > 0 {
+				fmt.Println("Resolving stream URL for info file...")
+				// Use first option as default or best quality logic? Just first for now
+				if url, err := svc.ResolveStream(epData.StreamOptions[0]); err == nil {
+					streamURL = url
+				}
+			}
+
+			err := dl.SaveAnimeInfo(animeTitle, ep.Title, epData, streamURL)
+			if err != nil {
+				fmt.Printf("Error saving info: %v\n", err)
 			}
 		}
 	}

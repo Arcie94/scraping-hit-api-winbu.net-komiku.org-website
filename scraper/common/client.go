@@ -24,8 +24,19 @@ func NewBaseClient(serviceName string) *BaseClient {
 
 // Do executes an HTTP request with common headers and logging
 func (c *BaseClient) Do(req *http.Request) (*http.Response, error) {
-	// Set User-Agent header
+	// Set complete browser-like headers
 	req.Header.Set("User-Agent", ChromeAndroidUserAgent)
+	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8")
+	req.Header.Set("Accept-Language", "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7")
+	req.Header.Set("Accept-Encoding", "gzip, deflate, br")
+	req.Header.Set("Connection", "keep-alive")
+	req.Header.Set("Upgrade-Insecure-Requests", "1")
+	req.Header.Set("Cache-Control", "max-age=0")
+
+	// Set Referer to make it look like navigation from homepage
+	if req.Header.Get("Referer") == "" {
+		req.Header.Set("Referer", req.URL.Scheme+"://"+req.URL.Host+"/")
+	}
 
 	// Log the request
 	log.Printf("[%s] Fetching: %s", c.ServiceName, req.URL.String())

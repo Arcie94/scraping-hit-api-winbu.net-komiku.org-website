@@ -25,7 +25,7 @@ func NewBaseClient(serviceName string) *BaseClient {
 // Do executes an HTTP request with common headers and logging
 func (c *BaseClient) Do(req *http.Request) (*http.Response, error) {
 	// Set User-Agent header
-	req.Header.Set("User-Agent", ChromeAndroidUserAgent)
+	req.Header.Set("User-Agent", ChromeDesktopUserAgent)
 
 	// Log the request
 	log.Printf("[%s] Fetching: %s", c.ServiceName, req.URL.String())

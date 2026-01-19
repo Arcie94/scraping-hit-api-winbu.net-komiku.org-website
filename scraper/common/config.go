@@ -1,11 +1,11 @@
 package common
 
 const (
-	// ChromeAndroidUserAgent is the User-Agent string for Chrome on Android
-	ChromeAndroidUserAgent = "Mozilla/5.0 (Linux; Android 13; SM-S908B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.230 Mobile Safari/537.36"
+	// ChromeDesktopUserAgent is the User-Agent string for Chrome on Windows
+	ChromeDesktopUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
 	// DefaultTimeout is the default HTTP client timeout
-	DefaultTimeout = 30 // seconds
+	DefaultTimeout = 60 // seconds
 )
 
 // Base URLs for scraper targets

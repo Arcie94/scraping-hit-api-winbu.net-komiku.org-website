@@ -11,6 +11,9 @@ services:
       - PORT=3000
     networks:
       - scraper-network
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
 
   nginx:
     image: nginx:alpine
@@ -31,7 +34,7 @@ services:
     restart: always
     command: tunnel run
     environment:
-      - TUNNEL_TOKEN=PASTE_TOKEN_DISINI
+      - TUNNEL_TOKEN=eyJhIjoiMjQ5NDM0MThkNWM3M2Y1YjA4ZTRlMjg2ZjBiYzBhNTYiLCJ0IjoiMzNhYjMwOTItMjNkZC00ZTFkLWIxYjItMzg3M2U4NWJmNDg0IiwicyI6Ik9UYzFOalpqTXpRdFlUTXlaaTAwWmpjMExXRTNaVFV0TlRrMk1UQmlNekJoTldSbCJ9
     networks:
       - scraper-network
 

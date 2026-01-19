@@ -25,6 +25,16 @@ services:
     networks:
       - scraper-network
 
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: scraper-tunnel
+    restart: always
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=PASTE_TOKEN_DISINI
+    networks:
+      - scraper-network
+
 networks:
   scraper-network:
     driver: bridge

@@ -525,7 +525,11 @@ func handleDetailWinbu(svc *service.WinbuService, scanner *bufio.Scanner, slug s
 			if len(epData.StreamOptions) > 0 {
 				fmt.Println("\nServer Stream:")
 				for i, opt := range epData.StreamOptions {
-					fmt.Printf("%d. %s [%s]\n", i+1, opt.Server, opt.Quality)
+					if opt.Quality != "" {
+						fmt.Printf("%d. %s [%s]\n", i+1, opt.Server, opt.Quality)
+					} else {
+						fmt.Printf("%d. %s\n", i+1, opt.Server)
+					}
 				}
 			}
 

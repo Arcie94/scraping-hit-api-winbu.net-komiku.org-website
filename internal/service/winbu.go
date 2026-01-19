@@ -55,7 +55,20 @@ func (s *WinbuService) FetchAndParseDetail(url string) (*winbu.AnimeDetail, erro
 		return nil, err
 	}
 
-	return winbu.ParseAnimeDetail(doc)
+	result, err := winbu.ParseAnimeDetail(doc)
+	if err != nil {
+		return nil, err
+	}
+
+	// If no episodes found (e.g. Movies), use the current page as the episode
+	if len(result.Episodes) == 0 {
+		result.Episodes = append(result.Episodes, winbu.Episode{
+			Title:    "Full Movie / Watch",
+			Endpoint: url,
+		})
+	}
+
+	return result, nil
 }
 
 func (s *WinbuService) FetchEpisode(url string) (*winbu.EpisodePageData, error) {

@@ -5,7 +5,7 @@
 *.dylib
 anime-api
 manga-api
-scraper
+# scraper - Commented out to allow scraper/ folder to be tracked
 
 # Test files
 *.test

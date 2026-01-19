@@ -47,6 +47,17 @@ func main() {
 	// 5. Setup Routes
 	routes.SetupRoutes(app, komikuHandler, winbuHandler)
 
+	// Serve Frontend (Static Files)
+	app.Static("/", "./dist")
+
+	// SPA Fallback: Serve index.html for any 404 (non-API) routes
+	app.Use(func(c *fiber.Ctx) error {
+		if c.Path()[:4] == "/api" {
+			return c.Next()
+		}
+		return c.SendFile("./dist/index.html")
+	})
+
 	// 6. Start Server
 	log.Fatal(app.Listen(":3000"))
 }

@@ -44,7 +44,7 @@ const EndpointDebugger = ({ method, path, description, params = [] }) => {
 
     const handleSend = async () => {
         const path = buildUrl();
-        const fullUrl = `http://localhost:3000${path}`;  // Hit port 3000 directly
+        const fullUrl = path;  // Use relative path for production compatibility
         console.log('Sending request to:', fullUrl);
 
         setLoading(true);
@@ -102,7 +102,7 @@ const EndpointDebugger = ({ method, path, description, params = [] }) => {
         setTimeout(() => setCopied(false), 2000);
     };
 
-    const previewUrl = `http://localhost${buildUrl()}`;
+    const previewUrl = typeof window !== 'undefined' ? `${window.location.origin}${buildUrl()}` : buildUrl();
 
     return (
         <div className="group bg-secondary/30 backdrop-blur-sm border border-white/10 rounded-xl overflow-hidden hover:border-primary/50 transition-all duration-300">

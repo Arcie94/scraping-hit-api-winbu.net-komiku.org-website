@@ -7,6 +7,7 @@ import (
 	"komiku-scraper/scraper/komiku"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -39,7 +40,22 @@ func (s *KomikuService) FetchAndParseList(url string) ([]komiku.Manga, error) {
 
 	log.Printf("[Komiku] List response status: %d", resp.StatusCode)
 
-	doc, err := goquery.NewDocumentFromReader(resp.Body)
+	// Read body for debug logging
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("[Komiku] Error reading body: %v", err)
+		return nil, err
+	}
+
+	// Debug: Log first 500 chars of HTML
+	htmlPreview := string(bodyBytes)
+	if len(htmlPreview) > 500 {
+		htmlPreview = htmlPreview[:500]
+	}
+	log.Printf("[Komiku] HTML Preview (first 500 chars): %s", htmlPreview)
+
+	// Create reader from bytes
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(bodyBytes)))
 	if err != nil {
 		log.Printf("[Komiku] Error parsing list HTML: %v", err)
 		return nil, err
@@ -49,6 +65,8 @@ func (s *KomikuService) FetchAndParseList(url string) ([]komiku.Manga, error) {
 	if err == nil {
 		log.Printf("[Komiku] Successfully parsed %d manga from list", len(result))
 		s.Cache.Set(cacheKey, result, cache.SearchTTL)
+	} else {
+		log.Printf("[Komiku] Parse error: %v", err)
 	}
 	return result, err
 }

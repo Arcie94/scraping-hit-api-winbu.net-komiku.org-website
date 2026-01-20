@@ -1,6 +1,7 @@
 package service
 
 import (
+	"compress/gzip"
 	"fmt"
 	"io"
 	"komiku-scraper/scraper/cache"
@@ -11,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/andybalholm/brotli"
 )
 
 type WinbuService struct {
@@ -20,6 +22,23 @@ type WinbuService struct {
 
 func NewWinbuService(client *winbu.WinbuClient, c *cache.Cache) *WinbuService {
 	return &WinbuService{Client: client, Cache: c}
+}
+
+// decompressResponse handles brotli/gzip decompression based on Content-Encoding header
+func decompressResponse(resp *http.Response) (io.Reader, error) {
+	contentEncoding := resp.Header.Get("Content-Encoding")
+	log.Printf("[Winbu] Content-Encoding: '%s'", contentEncoding)
+
+	switch contentEncoding {
+	case "gzip":
+		log.Printf("[Winbu] Decompressing gzip response")
+		return gzip.NewReader(resp.Body)
+	case "br":
+		log.Printf("[Winbu] Decompressing brotli response")
+		return brotli.NewReader(resp.Body), nil
+	default:
+		return resp.Body, nil
+	}
 }
 
 func (s *WinbuService) FetchSearch(keyword string) ([]winbu.Anime, error) {
@@ -38,7 +57,13 @@ func (s *WinbuService) FetchSearch(keyword string) ([]winbu.Anime, error) {
 	}
 	defer resp.Body.Close()
 
-	doc, err := goquery.NewDocumentFromReader(resp.Body)
+	// Handle compression
+	reader, err := decompressResponse(resp)
+	if err != nil {
+		return nil, fmt.Errorf("decompression error: %v", err)
+	}
+
+	doc, err := goquery.NewDocumentFromReader(reader)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +93,13 @@ func (s *WinbuService) FetchAndParseDetail(url string) (*winbu.AnimeDetail, erro
 	}
 	defer resp.Body.Close()
 
-	doc, err := goquery.NewDocumentFromReader(resp.Body)
+	// Handle compression
+	reader, err := decompressResponse(resp)
+	if err != nil {
+		return nil, fmt.Errorf("decompression error: %v", err)
+	}
+
+	doc, err := goquery.NewDocumentFromReader(reader)
 	if err != nil {
 		return nil, err
 	}
@@ -152,7 +183,13 @@ func (s *WinbuService) FetchEpisode(url string) (*winbu.EpisodePageData, error) 
 	}
 	defer resp.Body.Close()
 
-	doc, err := goquery.NewDocumentFromReader(resp.Body)
+	// Handle compression
+	reader, err := decompressResponse(resp)
+	if err != nil {
+		return nil, fmt.Errorf("decompression error: %v", err)
+	}
+
+	doc, err := goquery.NewDocumentFromReader(reader)
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +215,13 @@ func (s *WinbuService) FetchHomeData() (*winbu.HomeData, error) {
 	}
 	defer resp.Body.Close()
 
-	doc, err := goquery.NewDocumentFromReader(resp.Body)
+	// Handle compression
+	reader, err := decompressResponse(resp)
+	if err != nil {
+		return nil, fmt.Errorf("decompression error: %v", err)
+	}
+
+	doc, err := goquery.NewDocumentFromReader(reader)
 	if err != nil {
 		return nil, err
 	}

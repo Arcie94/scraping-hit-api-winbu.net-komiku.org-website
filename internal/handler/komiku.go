@@ -33,8 +33,8 @@ func (h *KomikuHandler) Search(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Query parameter 'q' is required"})
 	}
 
-	// Construct Search URL (using main domain, not data subdomain)
-	searchURL := fmt.Sprintf("https://komiku.id/?s=%s", strings.ReplaceAll(query, " ", "+"))
+	// Construct Search URL (using komiku.org like home endpoint)
+	searchURL := fmt.Sprintf("https://komiku.org/?s=%s", strings.ReplaceAll(query, " ", "+"))
 
 	results, err := h.Service.FetchAndParseList(searchURL)
 	if err != nil {

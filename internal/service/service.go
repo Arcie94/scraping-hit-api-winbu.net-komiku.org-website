@@ -47,12 +47,12 @@ func (s *KomikuService) FetchAndParseList(url string) ([]komiku.Manga, error) {
 		return nil, err
 	}
 
-	// Debug: Log first 500 chars of HTML
+	// Debug: Log first 2000 chars of HTML to see actual content
 	htmlPreview := string(bodyBytes)
-	if len(htmlPreview) > 500 {
-		htmlPreview = htmlPreview[:500]
+	if len(htmlPreview) > 2000 {
+		htmlPreview = htmlPreview[:2000]
 	}
-	log.Printf("[Komiku] HTML Preview (first 500 chars): %s", htmlPreview)
+	log.Printf("[Komiku] HTML Preview (first 2000 chars): %s", htmlPreview)
 
 	// Create reader from bytes
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(bodyBytes)))

@@ -43,7 +43,7 @@ services:
     container_name: scraper-warp
     restart: always
     ports:
-      - "9091:9091"
+      - "9092:9091"
     privileged: true
     volumes:
       - warp-data:/var/lib/cloudflare-warp

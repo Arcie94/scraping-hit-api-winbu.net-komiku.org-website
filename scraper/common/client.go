@@ -24,6 +24,7 @@ func NewBaseClient(serviceName string) *BaseClient {
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: true, // Skip SSL verification
 		},
+		// DisableCompression removed - let Go automatically handle gzip
 	}
 
 	// Add SOCKS5 proxy support if enabled

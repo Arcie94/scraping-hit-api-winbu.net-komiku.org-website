@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/andybalholm/brotli"
 )
 
 // KomikuService handles data fetching logic
@@ -45,9 +46,10 @@ func (s *KomikuService) FetchAndParseList(url string) ([]komiku.Manga, error) {
 	contentEncoding := resp.Header.Get("Content-Encoding")
 	log.Printf("[Komiku] Content-Encoding header: '%s'", contentEncoding)
 
-	// Handle gzip decompression explicitly
+	// Handle compression decompression explicitly
 	var reader io.Reader = resp.Body
-	if contentEncoding == "gzip" {
+	switch contentEncoding {
+	case "gzip":
 		log.Printf("[Komiku] Response is gzipped, decompressing...")
 		gzReader, err := gzip.NewReader(resp.Body)
 		if err != nil {
@@ -56,6 +58,13 @@ func (s *KomikuService) FetchAndParseList(url string) ([]komiku.Manga, error) {
 		}
 		defer gzReader.Close()
 		reader = gzReader
+	case "br":
+		log.Printf("[Komiku] Response is brotli-compressed, decompressing...")
+		reader = brotli.NewReader(resp.Body)
+	default:
+		if contentEncoding != "" {
+			log.Printf("[Komiku] Unknown Content-Encoding: %s", contentEncoding)
+		}
 	}
 
 	// Read body for debug logging

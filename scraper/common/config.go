@@ -13,3 +13,9 @@ const (
 	WinbuBaseURL  = "https://winbu.net"
 	KomikuBaseURL = "https://komiku.id"
 )
+
+// Proxy configuration
+const (
+	ProxyEnabled = true                // Toggle proxy usage
+	ProxyURL     = "socks5://warp:9091" // WARP SOCKS5 proxy
+)

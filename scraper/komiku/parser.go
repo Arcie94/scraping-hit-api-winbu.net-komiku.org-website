@@ -1,6 +1,7 @@
 package komiku
 
 import (
+	"log"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
@@ -9,12 +10,20 @@ import (
 func ParseMangaList(doc *goquery.Document) ([]Manga, error) {
 	var mangas []Manga
 
+	// DEBUG: Log total elements found
+	bgeCount := doc.Find(".bge").Length()
+	ls2Count := doc.Find("article.ls2").Length()
+	log.Printf("[Parser DEBUG] Found .bge elements: %d, article.ls2 elements: %d", bgeCount, ls2Count)
+
 	// Selector untuk halaman search/daftar komik (.bge adalah wrapper umum untuk item list)
 	doc.Find(".bge, article.ls2").Each(func(i int, s *goquery.Selection) {
 		// Coba ambil dari struktur .bge dulu
 		title := strings.TrimSpace(s.Find(".kan h3").Text())
 		endpoint, _ := s.Find(".kan a").Attr("href")
 		thumb, _ := s.Find(".bgei img").Attr("src")
+
+		// DEBUG: Log setiap item yang ditemukan
+		log.Printf("[Parser DEBUG] Item %d - .bge structure: title='%s', endpoint='%s', thumb='%s'", i, title, endpoint, thumb)
 
 		// Jika tidak ketemu, coba struktur ls2
 		if title == "" {
@@ -25,6 +34,7 @@ func ParseMangaList(doc *goquery.Document) ([]Manga, error) {
 			if thumb == "" {
 				thumb, _ = s.Find(".ls2v img").Attr("data-src")
 			}
+			log.Printf("[Parser DEBUG] Item %d - .ls2 structure: title='%s', endpoint='%s', thumb='%s'", i, title, endpoint, thumb)
 		}
 
 		// Bersihkan thumbnail dari parameter query string dan lazy placeholder
@@ -37,14 +47,18 @@ func ParseMangaList(doc *goquery.Document) ([]Manga, error) {
 		}
 
 		if title != "" && endpoint != "" {
+			log.Printf("[Parser DEBUG] ✓ Adding manga: %s", title)
 			mangas = append(mangas, Manga{
 				Title:    title,
 				Endpoint: endpoint,
 				Thumb:    thumb,
 			})
+		} else {
+			log.Printf("[Parser DEBUG] ✗ Skipping item %d - missing title or endpoint", i)
 		}
 	})
 
+	log.Printf("[Parser DEBUG] Total manga parsed: %d", len(mangas))
 	return mangas, nil
 }
 

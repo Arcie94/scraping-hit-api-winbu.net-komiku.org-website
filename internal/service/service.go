@@ -1,6 +1,7 @@
 package service
 
 import (
+	"compress/gzip"
 	"fmt"
 	"io"
 	"komiku-scraper/scraper/cache"
@@ -40,8 +41,21 @@ func (s *KomikuService) FetchAndParseList(url string) ([]komiku.Manga, error) {
 
 	log.Printf("[Komiku] List response status: %d", resp.StatusCode)
 
+	// Handle gzip decompression explicitly
+	var reader io.Reader = resp.Body
+	if resp.Header.Get("Content-Encoding") == "gzip" {
+		log.Printf("[Komiku] Response is gzipped, decompressing...")
+		gzReader, err := gzip.NewReader(resp.Body)
+		if err != nil {
+			log.Printf("[ Komiku] Error creating gzip reader: %v", err)
+			return nil, err
+		}
+		defer gzReader.Close()
+		reader = gzReader
+	}
+
 	// Read body for debug logging
-	bodyBytes, err := io.ReadAll(resp.Body)
+	bodyBytes, err := io.ReadAll(reader)
 	if err != nil {
 		log.Printf("[Komiku] Error reading body: %v", err)
 		return nil, err
